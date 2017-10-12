@@ -6,42 +6,103 @@ import bs4
 import urllib
 import sys
 
+
+def get_short_ad_description(Beautiful_Soup_object):
+    """This function extracts the short description of the advertised property. It works on a BeautifulSoup object."""
+    try:
+        description = Beautiful_Soup_object.p.text.strip()
+        return description
+    except:
+        pass
+
+
+def get_property_type(Beautiful_Soup_object):
+    """This function extracts the property type of the building advertised. It acts on a BeautifulSoup object."""
+    try:
+        property_type_html = Beautiful_Soup_object.findChild("ul", {"class":"info"})
+        property_type = property_type_html.li.text.strip()[:-1]
+        return property_type
+    except:
+        pass
+
+
+def get_house_price(Beautiful_Soup_object):
+    """This function extracts the price of the house from the ad. It works on a BeautifulSoup object."""
+    try:
+        price_html = Beautiful_Soup_object.find("strong", {"class":"price"}) # selects the strong tag
+        price = price_html.text # select the actual price as a string
+        return price
+    except:
+        pass    
+
+
 def get_ad_title(Beautiful_Soup_object):
     """This function extracts the title of the ad from the BeautifulSoup object provided.
     Daft.ie uses the address of the property as the ad title.
     The function accepts a BeautifulSoup object parsed as html, as a parameter."""
-    ad_box = Beautiful_Soup_object.findChild("div", {"class":"box"})
-    a_tag_data = ad_box.a #extracts the data in the <a><a> tag.
-    ad_title_property = "".join(a_tag_data.text.strip().split(",")) # select the address of the property without commas
-    return ad_title_property
-
+    try:
+        a_tag_data = Beautiful_Soup_object.a.text #extracts the data in the <a><a> tag, returned as a string
+        ad_title_property = a_tag_data.strip().split(",")  # select the address of the property without commas
+        ad_title_property = "--".join(ad_title_property)
+        return ad_title_property
+    except:
+        pass
 
 def save_image(link, path_to_save, desired_image_name):
     """This function will save the image present at the link provided to the path provided."""
-    current_working_directory = os.getcwd()
-    os.chdir(path_to_save)
-    image = urllib.request.urlretrieve(link, desired_image_name)
-    os.chdir(current_working_directory)
+    try:
+        if link[-4:] == ".jpg":
+            desired_image_name = str(desired_image_name) + str(link[-4:])
+        else:
+             desired_image_name = str(desired_image_name) + str(link[-5:])
+        #current_working_directory = os.getcwd()
+        os.chdir(path_to_save)
+        image = urllib.request.urlretrieve(link, desired_image_name)
+        #os.chdir(current_working_directory)
+    except:
+        pass
 
 def get_image_link(Beautiful_Soup_object):
-    image_html = Beautiful_Soup_object.findChild("div", {"class": "image"}) # finds the div with the image link
-    image = str(image) # transform the html into a string to extract the link to the image
-    link_to_image = image.split('src="')[1] # get rid of html "fluff"
-    link = link_to_image.split()[0][:-1] # select only the link
-    return link
+    """This function extracts the link of the image from the ad. It works on a BeautifulSoup object."""
+    try:
+        image_html = Beautiful_Soup_object.findChild("div", {"class": "image"}) # finds the div with the image link
+        link = image_html.find("img")["data-original"] #  select the src tag, containing the link
+        return link
+    except:
+        pass
+
 
 def get_number_of_beds(Beautiful_Soup_object):
-    number_of_beds_html = Beautiful_Soup_object.findChild("ul", {"class":"info"}) # gets the part of html with the beds
-    number_of_beds = number_of_beds_html.li.text.strip()[:-1] # selects only the number of beds
-    return number_of_beds
+    """This function extracts the number of beds from the ad. It uses a BeautifulSoup object"""
+    try:
+        number_of_beds_html = Beautiful_Soup_object.findChild("ul", {"class":"info"}) # gets the part of html with the beds
+        number_of_beds = number_of_beds_html.li.text.strip()[:-1] # selects only the number of beds
+        return number_of_beds
+    except:
+        pass
 
 
 def get_number_of_bathrooms(Beautiful_Soup_object):
-    number_of_bathrooms_html = Beautiful_Soup_object.findChild("ul", {"class": "info"})
-    number_of_bathrooms_with_extra_html = number_of_bathrooms_html.li.next_sibling.next_sibling
-    number_of_baths_html = number_of_bathrooms_with_extra_html.next_sibling.next_sibling
-    number_of_baths = number_of_baths_html.text.strip()
-    return number_of_baths
+    """This function extracts the number of baths from the ad. It works on a BeautifulSoup object."""
+    try:
+        number_of_bathrooms_html = Beautiful_Soup_object.findChild("ul", {"class": "info"})
+        number_of_bathrooms_with_extra_html = number_of_bathrooms_html.li.next_sibling.next_sibling
+        number_of_baths_html = number_of_bathrooms_with_extra_html.next_sibling.next_sibling
+        number_of_baths = number_of_baths_html.text.strip()
+        return number_of_baths
+    except:
+        pass
+
+
+def get_agent_name(Beautiful_Soup_object):
+    """This function extracts the name of the agent that advertises the property. It works on a BeautifulSoup object."""
+    try:
+        agent_name_html = Beautiful_Soup_object.findChild("ul", {"class":"links"})
+        agent_name = agent_name_html.li.next_sibling.next_sibling.text[1:] # select the second item in the li tags and removes the "|" symbol
+        return agent_name
+    except:
+        pass
+
 
 link = "http://www.daft.ie/ireland/property-for-sale/?offset=0"
 def link_update(link, pages_to_iterate):
@@ -61,30 +122,55 @@ def link_update(link, pages_to_iterate):
         i += 20
     return links
 
+
+def define_output(property_title, house_price, property_type, number_of_beds, number_of_bathrooms, property_description, agent):
+    """This is a helper function used to organise the output prior to writng it into a file."""
+    try:        
+        output = property_title + "," + house_price + "," + number_of_beds + "," + number_of_bathrooms + "," + property_description + "," + agent
+        return output
+    except:
+        pass    
+
+
+
 def web_scraper(link):
     html_file = urlopen(link)
     html_data = html_file.read()
     html_file.close()
     raw_html = BeautifulSoup(html_data, "html.parser")
     house_ads = raw_html.findAll("div", {"class":"box"}) #stored as a list
-    print(house_ads)
-    with open("scraped data.csv") as f:
-        i = 0
-        while i < len(house_ads):
-            property_title_with_address_and_type = " ".join(house_ads[i].a.text.strip().split(","))
-            house_image_link = str(house_ads[i].findChild("div", {"class":"image"})).split()[-9][5:-1]
-            urllib.request.urlretrieve(house_image_link, property_title_with_address_and_type)
-            # the line above stores the image in the folder with the ads
-            house_price = str(house_ads[i].findChildren("div", {"class":"info-box"})).split()[4][:-9]
-            # optional_price_increase = str(house_ads[i].findChildren("span", {"class":"price-change-up"})).split(">")[-2][:-6]
-            # above line is the optional price change, shown only in some ads, deprecated
-            property_type = str(house_ads[i].findChildren("ul", {"class":"info"})).split("\n")[2].strip().split("<")[0]
-            number_of_beds = str(house_ads[i].findChildren("ul", {"class":"info"})).split("\n")[4].strip().split("<")[0]
-            to_be_written = str(property_title_with_address_and_type) + "," + str(house_image_link) + "," + str(house_price) + "," + str(property_type) + "," +  str(number_of_beds + "\n")
-            f.write(to_be_written)
-            print("Number: {}\nProperty title with address and type of property: {}\nLink to the image of the house: {}\nPrice of the property: {}\n\nProperty type: {}\nNumber of beds: {}".format(i, property_title_with_address_and_type, house_image_link, house_price, property_type, number_of_beds))
-            i += 1
-
+    f = open(r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\scraped data.csv", "a")
+    #print(link)
+    i = 0
+    while i < len(house_ads):
+        print("i equals to: {}".format(i))
+        property_title_with_address_and_type = get_ad_title(house_ads[i])
+        #print(property_title_with_address_and_type)
+        house_image_link = get_image_link(house_ads[i])
+        print(house_image_link)
+        image_directory = r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\Images"
+        save_image(get_image_link(house_ads[i]), image_directory, property_title_with_address_and_type)
+        # the line above stores the image in the folder with the ads
+        house_price = get_house_price(house_ads[i])
+        #print(house_price)
+        # optional_price_increase = str(house_ads[i].findChildren("span", {"class":"price-change-up"})).split(">")[-2][:-6]
+        # above line is the optional price change, shown only in some ads, deprecated
+        property_type = get_property_type(house_ads[i])
+        #print(property_type)
+        number_of_beds = get_number_of_beds(house_ads[i])
+        #print(number_of_beds)
+        number_of_bathrooms = get_number_of_bathrooms(house_ads[i])
+        #print(number_of_bathrooms)
+        short_description = get_short_ad_description(house_ads[i])
+        #print(short_description)
+        agent = get_agent_name(house_ads[i])
+        #print(agent)
+        content = str(define_output(property_title_with_address_and_type, house_price, property_type, number_of_beds, number_of_bathrooms, short_description, agent)) 
+        #print(type(content))
+        f.write(content)
+        print(content)
+        i += 1
+    f.close()
 
 
 
@@ -92,13 +178,18 @@ def web_scraper(link):
 # address_of_property = code.body.table.h2.text.strip()
 # link_to_house_image =
 # image_of_house = urllib.urlretrieve(link_to_house_image)
+
+
 def main():
     """The for loop in this function 'glues' together the link_update function and the web_scraper function.
     The link_update function now returns a list of links."""
     link = "http://www.daft.ie/ireland/property-for-sale/?offset=0"
     pages_to_iterate = int(input("Please enter the number of pages to be iterated:"))
     links = link_update(link, pages_to_iterate)
-    print(links)
+    #print(links)
+    f = open("scraped data.csv", "w")
+    f.close()
+
     for link in links:
         web_scraper(link)
 
