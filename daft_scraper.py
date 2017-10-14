@@ -1,4 +1,3 @@
-import csv
 import os
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
@@ -132,29 +131,43 @@ def link_update(link, pages_to_iterate):
 
 def define_output(property_title, house_price, number_of_beds, number_of_bathrooms, property_description, agent):
     """This is a helper function used to organise the output prior to writng it into a file."""
-    #try:
-        #output = agent + ", "
-    output = property_title + "," + house_price + "," + number_of_beds + "," + number_of_bathrooms + "," + property_description + "," + agent + "\n"
-    return output
-    #except:
-    #    pass
+    try:
+        #output = ",".join(property_title, house_price, number_of_beds, number_of_bathrooms, property_description, agent) + "\n"
+        #output = "{},{},{},{},{},{}".format(property_title, house_price, number_of_beds, number_of_bathrooms, property_description, agent)
+        output = property_title + "," + house_price + "," + number_of_beds + "," + number_of_bathrooms + "," + property_description + "," + agent + "\n"
+        return output
+    except:
+        pass
 
 
 def get_ad_link(Beautiful_Soup_object):
     """This function will extract the link of each ad."""
     ad_link = Beautiful_Soup_object.h2.a["href"] # select the link to the ad
-    return "www." + "daft.ie" + ad_link # returns a string containing the link to the ad
+    return "https://www.daft.ie" + ad_link # returns a string containing the link to the ad
 
 
-def save_all_ad_pictures_detail(Beautiful_Soup_object, folder_name, ad_title):
+def open_ad_link(ad_link):
+    ad_details_html = urlopen(ad_link)
+    ad_details_data = ad_details_html.read()
+    ad_details_html.close()
+    return ad_details_data
+
+def save_all_ad_pictures_detail(folder_name, ad_title, ad_link):
     """This function will save all the images from an ad. It takes as a parameter a
     BeautifulSoup object, the name of the folder in which it will save the images and the title of the ad.
     The folder name should be the ad title."""
+    ad_details_data = open_ad_link(ad_link)
+    Beautiful_Soup_object = BeautifulSoup(ad_details_data, "html.parser")
     current_working_directory = os.getcwd()
     folder = current_working_directory + r"\\" + folder_name
+    os.mkdir(folder)
     image_links = get_image_links_details(Beautiful_Soup_object)
+    number = len(image_links)
+    p = 0
     for link in image_links:
-        save_image(link, folder, ad_title)
+        save_image(link, folder, ad_title + str(p))
+        p += 1
+    os.chdir(current_working_directory)
 
 
 def get_image_links_details(Beautiful_Soup_object):
@@ -202,42 +215,42 @@ def web_scraper(link):
     html_file.close()
     raw_html = BeautifulSoup(html_data, "html.parser")
     house_ads = raw_html.findAll("div", {"class":"box"}) #stored as a list
-    with open(r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\scraped data.csv", "a") as csv_file:
-        #csv_doc = csv.writer(csv_file, delimiter=)
-        #print(link)
-        i = 0
-        while i < len(house_ads):
-            print("i equals to: {}".format(i))
-            property_title_with_address_and_type = get_ad_title(house_ads[i])
-            print(property_title_with_address_and_type)
-            house_image_link = get_image_link(house_ads[i])
-            #print(house_image_link)
-            image_directory = r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\Images"
-            save_image(get_image_link(house_ads[i]), image_directory, property_title_with_address_and_type)
-            ad_link = get_ad_link(house_ads[i])
-            save_all_ad_pictures_detail(house_ads[i], property_title_with_address_and_type, )
-            # the line above stores the image in the folder with the ads
-            house_price = get_house_price(house_ads[i])
-            #print(house_price)
-            # optional_price_increase = str(house_ads[i].findChildren("span", {"class":"price-change-up"})).split(">")[-2][:-6]
-            # above line is the optional price change, shown only in some ads, deprecated
-            property_type = get_property_type(house_ads[i])
-            #print(property_type)
-            number_of_beds = get_number_of_beds(house_ads[i])
-            #print(number_of_beds)
-            number_of_bathrooms = get_number_of_bathrooms(house_ads[i])
-            #print(number_of_bathrooms)
-            short_description = get_short_ad_description(house_ads[i])
-            #print(short_description)
-            agent = get_agent_name(house_ads[i])
+    f =  open(r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\scraped data.csv", "w+")
+    #csv_doc = csv.writer(csv_file, delimiter=)
+    #print(link)
+    i = 0
+    while i < len(house_ads):
+        print("i equals to: {}".format(i))
+        property_title_with_address_and_type = get_ad_title(house_ads[i])
+        print(property_title_with_address_and_type)
+        #house_image_link = get_image_link(house_ads[i])
+        #print(house_image_link)
+        image_directory = r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\Images"
+        #save_image(get_image_link(house_ads[i]), image_directory, property_title_with_address_and_type)
+        ad_link = get_ad_link(house_ads[i])
+        save_all_ad_pictures_detail(property_title_with_address_and_type, property_title_with_address_and_type + str(i), ad_link)
+        # the line above stores the image in the folder with the ads
+        house_price = get_house_price(house_ads[i])
+        #print(house_price)
+        # optional_price_increase = str(house_ads[i].findChildren("span", {"class":"price-change-up"})).split(">")[-2][:-6]
+        # above line is the optional price change, shown only in some ads, deprecated
+        property_type = get_property_type(house_ads[i])
+        #print(property_type)
+        number_of_beds = get_number_of_beds(house_ads[i])
+        #print(number_of_beds)
+        number_of_bathrooms = get_number_of_bathrooms(house_ads[i])
+        #print(number_of_bathrooms)
+        short_description = get_short_ad_description(house_ads[i])
+        #print(short_description)
+        agent = get_agent_name(house_ads[i])
 
-            print(agent)
-            content = define_output(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, short_description, agent)
-            #print(content)
-            #csv_doc.writerows(content)
-            csv_file.write(content)
-            #print(content)
-            i += 1
+        print(agent)
+        content = str(define_output(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, short_description, agent))
+        print(content)
+        #csv_doc.writerows(content)
+        f.write(content)
+        #print(content)
+        i += 1
 
 
 # print(len(house_ads))
