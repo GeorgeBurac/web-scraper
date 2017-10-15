@@ -1,3 +1,4 @@
+import csv
 import os
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
@@ -11,7 +12,7 @@ def get_short_ad_description(Beautiful_Soup_object):
     """This function extracts the short description of the advertised property. It works on a BeautifulSoup object."""
     try:
         description = Beautiful_Soup_object.find("div", {"class":"text-block"})
-        description = description.p.text.strip().replace(",", "")#.replace("\n", "").replace("\t", " ")
+        description = description.p.text.strip().replace(",", "").replace("\n", "--").replace("\r", "--").replace("\t", "--")#.replace("\n", "").replace("\t", " ")
         return description
     except:
         pass
@@ -104,11 +105,13 @@ def get_agent_name(Beautiful_Soup_object):
         agent_name = agent_name_html.text[1:]
         return agent_name
     except:
-        agent_name_html = Beautiful_Soup_object.find("ul", {"class":"links"}).li.next_sibling.next_sibling
-        agent_name = agent_name_html.text[1:]# select the second item in the li tags and removes the "|" symbol
-        #print(agent_name)
-        return agent_name
-
+        try:
+            agent_name_html = Beautiful_Soup_object.find("ul", {"class":"links"}).li.next_sibling.next_sibling
+            agent_name = agent_name_html.a.text# select the second item in the li tags and removes the "|" symbol
+            return agent_name
+        except:
+            return ""
+        pass
 
 link = "http://www.daft.ie/ireland/property-for-sale/?offset=0"
 def link_update(link, pages_to_iterate):
@@ -132,8 +135,6 @@ def link_update(link, pages_to_iterate):
 def define_output(property_title, house_price, number_of_beds, number_of_bathrooms, property_description, agent):
     """This is a helper function used to organise the output prior to writng it into a file."""
     try:
-        #output = ",".join(property_title, house_price, number_of_beds, number_of_bathrooms, property_description, agent) + "\n"
-        #output = "{},{},{},{},{},{}".format(property_title, house_price, number_of_beds, number_of_bathrooms, property_description, agent)
         output = property_title + "," + house_price + "," + number_of_beds + "," + number_of_bathrooms + "," + property_description + "," + agent + "\n"
         return output
     except:
@@ -156,18 +157,21 @@ def save_all_ad_pictures_detail(folder_name, ad_title, ad_link):
     """This function will save all the images from an ad. It takes as a parameter a
     BeautifulSoup object, the name of the folder in which it will save the images and the title of the ad.
     The folder name should be the ad title."""
-    ad_details_data = open_ad_link(ad_link)
-    Beautiful_Soup_object = BeautifulSoup(ad_details_data, "html.parser")
-    current_working_directory = os.getcwd()
-    folder = current_working_directory + r"\\" + folder_name
-    os.mkdir(folder)
-    image_links = get_image_links_details(Beautiful_Soup_object)
-    number = len(image_links)
-    p = 0
-    for link in image_links:
-        save_image(link, folder, ad_title + str(p))
-        p += 1
-    os.chdir(current_working_directory)
+    try:
+        ad_details_data = open_ad_link(ad_link)
+        Beautiful_Soup_object = BeautifulSoup(ad_details_data, "html.parser")
+        current_working_directory = os.getcwd()
+        folder = current_working_directory + r"\\" + folder_name
+        os.mkdir(folder)
+        image_links = get_image_links_details(Beautiful_Soup_object)
+        number = len(image_links)
+        p = 0
+        for link in image_links:
+            save_image(link, folder, ad_title + str(p))
+            p += 1
+        os.chdir(current_working_directory)
+    except:
+        pass
 
 
 def get_image_links_details(Beautiful_Soup_object):
@@ -196,11 +200,19 @@ def get_floor_area_detail(Beautiful_Soup_object):
     #floor_area_detail = Beautiful_Soup_object.find("div", )
 
 
-def get_property_description_detail(Beautiful_Soup_object):
-    pass
-    description_detail = Beautiful_Soup_object.find("div", {"id":"description"}).text.split("\n") #extract the text
+def get_property_description_detail(ad_link):
+    """This function extracts the detailed description of the ad. It uses the ad link as parameter."""
+    html = open_ad_link(ad_link)
+    Beautiful_Soup_object = BeautifulSoup(html, "html.parser")
+    property_overview = get_property_overview_detail(Beautiful_Soup_object)
+    description_detail = Beautiful_Soup_object.find("div", {"id":"description"}).text.replace("\n", " ").replace("\r", ";").replace(",", "-") #extract the text
     description = "".join(description_detail[:-35]).replace("\r", "")
+    #print(description)
+    return description[21:], property_overview[18:]
 
+
+def get_property_address(ad_link):
+    pass
 
 def get_property_features_detail(Beautiful_Soup_object):
     """This function will extract the feature details of the property."""
@@ -215,8 +227,9 @@ def web_scraper(link):
     html_file.close()
     raw_html = BeautifulSoup(html_data, "html.parser")
     house_ads = raw_html.findAll("div", {"class":"box"}) #stored as a list
-    f =  open(r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\scraped data.csv", "w+")
-    #csv_doc = csv.writer(csv_file, delimiter=)
+    f = open(r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\scraped data.csv", "w+")
+    f.write("Property title, Price, Beds, Bathrooms, Description, Agent\n")
+    #csv_doc = csv.writer(f, dialect="excel")
     #print(link)
     i = 0
     while i < len(house_ads):
@@ -240,23 +253,21 @@ def web_scraper(link):
         #print(number_of_beds)
         number_of_bathrooms = get_number_of_bathrooms(house_ads[i])
         #print(number_of_bathrooms)
-        short_description = get_short_ad_description(house_ads[i])
-        #print(short_description)
+        description = get_property_description_detail(ad_link)
+        #print(description)
         agent = get_agent_name(house_ads[i])
 
-        print(agent)
-        content = str(define_output(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, short_description, agent))
+        #print(agent)
+        #content = str(define_output(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, short_description, agent))
+        content = "Title: {}\nPrice: {}\nBeds: {}\nBathrooms: {}\nDescription: {}\nProperty overview: {}\nAgent: {}".format(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, description[0], description[1], agent)
         print(content)
-        #csv_doc.writerows(content)
-        f.write(content)
-        #print(content)
+        print(type(content))
+        output = "{},{},{},{},{},{},{}\n".format(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, description[0], description[1], agent)
+
+        f.write(output)
+
         i += 1
 
-
-# print(len(house_ads))
-# address_of_property = code.body.table.h2.text.strip()
-# link_to_house_image =
-# image_of_house = urllib.urlretrieve(link_to_house_image)
 
 
 def main():
