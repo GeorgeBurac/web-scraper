@@ -1,4 +1,3 @@
-import csv
 import os
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
