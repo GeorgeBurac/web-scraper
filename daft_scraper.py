@@ -79,7 +79,7 @@ def get_number_of_beds(Beautiful_Soup_object):
     """This function extracts the number of beds from the ad. It uses a BeautifulSoup object"""
     try:
         number_of_beds_html = Beautiful_Soup_object.findChild("ul", {"class":"info"}) # gets the part of html with the beds
-        number_of_beds = number_of_beds_html.li.text.strip()[:-1] # selects only the number of beds
+        number_of_beds = number_of_beds_html.li.next_sibling.next_sibling.text.strip()[:-1] # selects only the number of beds
         return number_of_beds
     except:
         pass
@@ -126,7 +126,7 @@ def link_update(link, pages_to_iterate):
         link = link[0] + "="  #it actually specifies the number of ads. There are 20 ads per page. Therefore, offset=20 is page 1
         link += "%d" % i
         links.append(link)
-#        print(link)
+    #        print(link)
         i += 20
     return links
 
@@ -192,15 +192,18 @@ def get_property_overview_detail(Beautiful_Soup_object):
 
 
 def get_stamp_duty(price):
-    return "The stamp duty for purchasing this property is {}".format(price / 100)
+    """This function returns the stamp duty to be paid at the purchase of the property.
+    It takes as a parameter the price of the property."""
+    return "{}".format(price / 100)
 
 def get_floor_area_detail(Beautiful_Soup_object):
-    pass
-    #floor_area_detail = Beautiful_Soup_object.find("div", )
-
+    """This function extracts the floor area of the property. It takes a BeautifulSoup object as a parameter."""
+    floor_area_detail = Beautiful_Soup_object.find("div", {"id":"smi-tab-overview"}) # selects the div containing the floor area
+    floor_area = floor_area_detail.find("strong").next_sibling # selects the floor area
+    return floor_area
 
 def get_property_description_detail(ad_link):
-    """This function extracts the detailed description of the ad. It uses the ad link as parameter."""
+    """This function extracts the detailed description of the ad and the type of ad. It uses the ad link as parameter."""
     html = open_ad_link(ad_link)
     Beautiful_Soup_object = BeautifulSoup(html, "html.parser")
     property_overview = get_property_overview_detail(Beautiful_Soup_object)
@@ -211,7 +214,10 @@ def get_property_description_detail(ad_link):
 
 
 def get_property_address(ad_link):
-    pass
+    html_data = open_ad_link(ad_link)
+    Beautiful_Soup_object = BeautifulSoup(html_data, "html.parser")
+    address = Beautiful_Soup_object.h1.text.strip().split(",")
+    return "-".join(address)
 
 def get_property_features_detail(Beautiful_Soup_object):
     """This function will extract the feature details of the property."""
@@ -221,28 +227,22 @@ def get_property_features_detail(Beautiful_Soup_object):
 
 
 def web_scraper(link):
-    html_file = urlopen(link)
-    html_data = html_file.read()
-    html_file.close()
+    html_data = open_ad_link(link)
     raw_html = BeautifulSoup(html_data, "html.parser")
     house_ads = raw_html.findAll("div", {"class":"box"}) #stored as a list
-    f = open(r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\scraped data.csv", "w+")
-    f.write("Property title, Price, Beds, Bathrooms, Description, Agent\n")
-    #csv_doc = csv.writer(f, dialect="excel")
-    #print(link)
+
+    f = open(r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\scraped data.csv", "a")
     i = 0
     while i < len(house_ads):
         print("i equals to: {}".format(i))
         property_title_with_address_and_type = get_ad_title(house_ads[i])
-        print(property_title_with_address_and_type)
-        #house_image_link = get_image_link(house_ads[i])
-        #print(house_image_link)
-        image_directory = r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\Images"
-        #save_image(get_image_link(house_ads[i]), image_directory, property_title_with_address_and_type)
+        #image_directory = r"C:\Users\George Burac\Desktop\p2\NSD\AlinProjects\Daft Scraper\Images"
         ad_link = get_ad_link(house_ads[i])
         save_all_ad_pictures_detail(property_title_with_address_and_type, property_title_with_address_and_type + str(i), ad_link)
         # the line above stores the image in the folder with the ads
         house_price = get_house_price(house_ads[i])
+        property_address = get_property_address(ad_link)
+        print(type(property_address))
         #print(house_price)
         # optional_price_increase = str(house_ads[i].findChildren("span", {"class":"price-change-up"})).split(">")[-2][:-6]
         # above line is the optional price change, shown only in some ads, deprecated
@@ -252,16 +252,17 @@ def web_scraper(link):
         #print(number_of_beds)
         number_of_bathrooms = get_number_of_bathrooms(house_ads[i])
         #print(number_of_bathrooms)
+        short_ad_description = get_short_ad_description(house_ads[i])
         description = get_property_description_detail(ad_link)
         #print(description)
         agent = get_agent_name(house_ads[i])
 
         #print(agent)
         #content = str(define_output(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, short_description, agent))
-        content = "Title: {}\nPrice: {}\nBeds: {}\nBathrooms: {}\nDescription: {}\nProperty overview: {}\nAgent: {}".format(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, description[0], description[1], agent)
+        content = "Title: {}\nPrice: {}\nBeds: {}\nBathrooms: {}\nAddress: {}\nDescription: {}\nProperty overview: {}\nAgent: {}\nShort ad description: {}".format(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, property_address, description[0], description[1], agent, short_ad_description)
         print(content)
         print(type(content))
-        output = "{},{},{},{},{},{},{}\n".format(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, description[0], description[1], agent)
+        output = "{},{},{},{},{},{},{},{},{}\n".format(property_title_with_address_and_type, house_price, number_of_beds, number_of_bathrooms, property_address, description[0], description[1], agent, short_ad_description)
 
         f.write(output)
 
@@ -276,12 +277,15 @@ def main():
     pages_to_iterate = int(input("Please enter the number of pages to be iterated:"))
     links = link_update(link, pages_to_iterate)
     #print(links)
-
-    f = open("scraped data.csv", "w")
+    #print("Please enter the path to the file where you wish to save the data: ", end="")
+    #scraped_data_file = sys.stdin.readline()
+    f = open(r"scraped data.csv", "w")
+    f.write("Property title, Price, Beds, Bathrooms, Property address, Description, Property overview, Agent, Short ad description\n")
     f.close()
 
     for link in links:
         web_scraper(link)
+
 
 
 if __name__ == "__main__":
